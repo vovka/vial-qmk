@@ -19,7 +19,7 @@
 #pragma once
 
 /* USB VBUS detection (not in JSON yet) */
-#define USB_VBUS_PIN GP19
+// #define USB_VBUS_PIN GP19
 
 /* Handedness (not in JSON yet) */
 // #define SPLIT_USB_DETECT
@@ -29,6 +29,10 @@
 /* Serial USART configuration (not in JSON yet) */
 #define SERIAL_USART_RX_PIN GP1
 #define SERIAL_USART_FULL_DUPLEX
+
+/* Left-side matrix pins */
+#define MATRIX_COL_PINS { GP8, GP7, GP5, GP13, GP9 }
+#define MATRIX_ROW_PINS { GP6, GP12, GP18, GP17 }
 
 /* Right-side matrix pins (not in JSON yet) */
 #define MATRIX_COL_PINS_RIGHT { GP6, GP7, GP8, GP9, GP10 }
@@ -46,7 +50,7 @@
 
 /* Bootloader double-tap (not in JSON yet) */
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET
-#define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_LED GP17
+// #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_LED GP17
 #define RP2040_BOOTLOADER_DOUBLE_TAP_RESET_TIMEOUT 500U
 
 /* Optimization */

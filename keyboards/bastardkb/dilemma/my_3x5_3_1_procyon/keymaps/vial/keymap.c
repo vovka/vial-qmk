@@ -80,11 +80,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // clang-format on
 
 // Encoder map required when ENCODER_MAP_ENABLE = yes
+// 2 encoders: left encoder (index 0), right encoder (index 1)
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [LAYER_BASE] = { ENCODER_CCW_CW(KC_UP, KC_DOWN) },
-    [LAYER_NAV]  = { ENCODER_CCW_CW(RGB_HUD, RGB_HUI) },
-    [LAYER_SYM]  = { ENCODER_CCW_CW(RGB_VAD, RGB_VAI) },
-    [LAYER_NUM]  = { ENCODER_CCW_CW(RGB_RMOD, RGB_MOD) },
+    [LAYER_BASE] = { ENCODER_CCW_CW(KC_UP, KC_DOWN), ENCODER_CCW_CW(KC_LEFT, KC_RIGHT) },
+    [LAYER_NAV]  = { ENCODER_CCW_CW(RGB_HUD, RGB_HUI), ENCODER_CCW_CW(RGB_SAD, RGB_SAI) },
+    [LAYER_SYM]  = { ENCODER_CCW_CW(RGB_VAD, RGB_VAI), ENCODER_CCW_CW(RGB_SPD, RGB_SPI) },
+    [LAYER_NUM]  = { ENCODER_CCW_CW(RGB_RMOD, RGB_MOD), ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
 };
 #endif

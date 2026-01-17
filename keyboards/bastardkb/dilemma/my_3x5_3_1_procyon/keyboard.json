@@ -1,7 +1,8 @@
 {
     "keyboard_name": "My Dilemma 3x5_3 with knobs and Procyon touchpad",
     "usb": {
-        "device_version": "2.0.0",
+        "device_version": "1.0.0",
+        "vid": "0xFEED",
         "pid": "0x1836"
     },
     "processor": "RP2040",
@@ -22,6 +23,13 @@
             "sync": {
                 "matrix_state": true
             }
+        },
+        "encoder": {
+            "right": {
+                "rotary": [
+                    {"pin_a": "GP14", "pin_b": "GP16"}
+                ]
+            }
         }
     },
     "encoder": {
@@ -33,12 +41,11 @@
     "features": {
         "bootmagic": true,
         "command": false,
-        "console": false,
+        "console": true,
         "extrakey": true,
         "mousekey": true,
         "nkro": true,
         "rgb_matrix": true,
-        "pointing_device": true,
         "caps_word": true,
         "tri_layer": true
     },

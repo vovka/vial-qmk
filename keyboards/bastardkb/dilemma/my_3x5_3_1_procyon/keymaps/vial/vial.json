@@ -9,7 +9,7 @@
   "usb": {
     "device_version": "1.0.0",
     "vid": "0xFEED",
-    "pid": "0x1837"
+    "pid": "0x1836"
   },
   "split": {
     "enabled": true,
