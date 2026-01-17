@@ -22,7 +22,7 @@
 #define USB_VBUS_PIN GP19
 
 /* Handedness (not in JSON yet) */
-#define SPLIT_USB_DETECT
+// #define SPLIT_USB_DETECT
 // #define SPLIT_HAND_PIN GP29
 // #define SPLIT_HAND_PIN_LOW_IS_LEFT
 
@@ -52,3 +52,6 @@
 /* Optimization */
 #define CRC8_USE_TABLE
 #define CRC8_OPTIMIZE_SPEED
+
+/* Dynamic keymap layers */
+#define DYNAMIC_KEYMAP_LAYER_COUNT 4

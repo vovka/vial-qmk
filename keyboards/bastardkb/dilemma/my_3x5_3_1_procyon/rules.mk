@@ -5,3 +5,9 @@ I2C_DRIVER_REQUIRED = yes
 # Maxtouch digitizer
 DIGITIZER_DRIVER = maxtouch
 DIGITIZER_ENABLE = yes
+MAXTOUCH_DEBUG = yes
+
+# Features
+TRI_LAYER_ENABLE = yes
+EE_HANDS = yes
+ENCODER_MAP_ENABLE = yes
