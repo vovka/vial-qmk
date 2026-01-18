@@ -21,7 +21,8 @@
 /* USB VBUS detection (not in JSON yet) */
 // #define USB_VBUS_PIN GP19
 
-/* Handedness (not in JSON yet) */
+/* Handedness - use EE_HANDS to store side in EEPROM */
+#define EE_HANDS
 // #define SPLIT_USB_DETECT
 // #define SPLIT_HAND_PIN GP29
 // #define SPLIT_HAND_PIN_LOW_IS_LEFT

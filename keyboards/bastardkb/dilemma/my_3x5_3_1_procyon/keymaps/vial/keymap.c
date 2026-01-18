@@ -16,6 +16,8 @@
  */
 
 #include QMK_KEYBOARD_H
+#include "dynamic_keymap.h"
+#include "vial.h"
 
 enum dilemma_keymap_layers {
     LAYER_BASE = 0,
@@ -89,3 +91,55 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     [LAYER_NUM]  = { ENCODER_CCW_CW(RGB_RMOD, RGB_MOD), ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
 };
 #endif
+
+void eeconfig_init_user(void) {
+#ifdef VIAL_COMBO_ENABLE
+    vial_combo_entry_t combo = { .input = { KC_Q, KC_T, KC_B, COMBO_END }, .output = QK_BOOT };
+    dynamic_keymap_set_combo(0, &combo);
+
+    combo = (vial_combo_entry_t){ .input = { KC_N, KC_Y, KC_P, COMBO_END }, .output = QK_BOOT };
+    dynamic_keymap_set_combo(1, &combo);
+    vial_init();
+#endif
+}
+
+static bool combo_slot_is_empty(uint8_t index) {
+#ifdef VIAL_COMBO_ENABLE
+    vial_combo_entry_t combo = { 0 };
+    if (dynamic_keymap_get_combo(index, &combo) != 0) {
+        return false;
+    }
+    if (combo.output != 0) {
+        return false;
+    }
+    for (size_t i = 0; i < ARRAY_SIZE(combo.input); ++i) {
+        if (combo.input[i] != 0) {
+            return false;
+        }
+    }
+    return true;
+#else
+    (void)index;
+    return false;
+#endif
+}
+
+void keyboard_post_init_user(void) {
+#ifdef VIAL_COMBO_ENABLE
+    bool changed = false;
+
+    if (combo_slot_is_empty(0)) {
+        vial_combo_entry_t combo = { .input = { KC_Q, KC_T, KC_B, COMBO_END }, .output = QK_BOOT };
+        dynamic_keymap_set_combo(0, &combo);
+        changed = true;
+    }
+    if (combo_slot_is_empty(1)) {
+        vial_combo_entry_t combo = { .input = { KC_N, KC_Y, KC_P, COMBO_END }, .output = QK_BOOT };
+        dynamic_keymap_set_combo(1, &combo);
+        changed = true;
+    }
+    if (changed) {
+        vial_init();
+    }
+#endif
+}
