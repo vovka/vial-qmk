@@ -9,17 +9,17 @@
 
 // LED layout constants
 #define LEDS_PER_HALF 43
-#define PERKEY_LEFT_START 0
 #define PERKEY_LEFT_END 19      // 19 per-key LEDs on left (indices 0-18)
 #define PERKEY_RIGHT_START 43
 #define PERKEY_RIGHT_END 62     // 19 per-key LEDs on right (indices 43-61)
+#define TOTAL_LEDS (LEDS_PER_HALF * 2)
 
 // Reactive effect settings
 #define FADE_DURATION 300       // ms to fade out after key release
 
-// Track key press state and timing for each LED
-static uint32_t key_press_time[LEDS_PER_HALF * 2];  // timestamp when key was released (0 = currently held)
-static bool     key_held[LEDS_PER_HALF * 2];        // true if key is currently held
+// Track release timing for fade effect
+static uint32_t key_release_time[TOTAL_LEDS];  // timestamp when key was released (0 = not fading)
+static bool     key_was_pressed[TOTAL_LEDS];   // track previous state to detect release
 
 enum dilemma_keymap_layers {
     LAYER_BASE = 0,
@@ -93,38 +93,17 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 };
 #endif
 
-// Find LED index for a given matrix position
-// Returns 255 if no LED exists for this position
-static uint8_t get_led_for_matrix(uint8_t row, uint8_t col) {
-    uint8_t led_index = 255;
-    // Use QMK's built-in function to find LED by matrix position
-    // g_led_config.matrix_co[row][col] contains the LED index or NO_LED
-    if (row < MATRIX_ROWS && col < MATRIX_COLS) {
-        led_index = g_led_config.matrix_co[row][col];
+// Check if a key at matrix position is currently pressed
+// Uses the synced matrix state which works on both halves
+static bool matrix_key_pressed(uint8_t row, uint8_t col) {
+    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
+        return false;
     }
-    return led_index;
-}
-
-// Track key presses for reactive effect
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    uint8_t led = get_led_for_matrix(record->event.key.row, record->event.key.col);
-
-    if (led != NO_LED && led < sizeof(key_held)) {
-        if (record->event.pressed) {
-            // Key pressed - mark as held
-            key_held[led] = true;
-            key_press_time[led] = 0;  // 0 means currently held
-        } else {
-            // Key released - start fade timer
-            key_held[led] = false;
-            key_press_time[led] = timer_read32();
-        }
-    }
-
-    return true;  // Continue processing
+    return matrix_is_on(row, col);
 }
 
 // RGB Matrix indicators - simple reactive keypress effect
+// Uses matrix state directly (synced between halves) instead of process_record_user
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     for (uint8_t i = led_min; i < led_max; i++) {
         // Check if this is a per-key LED (not underglow)
@@ -137,13 +116,32 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             continue;
         }
 
-        // Per-key LED - check if held or fading
-        if (key_held[i]) {
+        // Find which matrix position this LED corresponds to
+        // by searching through g_led_config.matrix_co
+        bool key_is_pressed = false;
+        for (uint8_t row = 0; row < MATRIX_ROWS && !key_is_pressed; row++) {
+            for (uint8_t col = 0; col < MATRIX_COLS && !key_is_pressed; col++) {
+                if (g_led_config.matrix_co[row][col] == i) {
+                    key_is_pressed = matrix_key_pressed(row, col);
+                }
+            }
+        }
+
+        // Track state changes for fade effect
+        if (key_is_pressed) {
             // Key is held - full brightness white
             rgb_matrix_set_color(i, 255, 255, 255);
-        } else if (key_press_time[i] > 0) {
-            // Key was released - fade out
-            uint32_t elapsed = timer_elapsed32(key_press_time[i]);
+            key_was_pressed[i] = true;
+            key_release_time[i] = 0;  // Reset fade timer
+        } else if (key_was_pressed[i] && key_release_time[i] == 0) {
+            // Key just released - start fade
+            key_release_time[i] = timer_read32();
+            if (key_release_time[i] == 0) key_release_time[i] = 1;  // Avoid 0
+            key_was_pressed[i] = false;
+            rgb_matrix_set_color(i, 255, 255, 255);
+        } else if (key_release_time[i] > 0) {
+            // Key released - fade out
+            uint32_t elapsed = timer_elapsed32(key_release_time[i]);
 
             if (elapsed < FADE_DURATION) {
                 // Calculate fade (255 -> 0 over FADE_DURATION)
@@ -152,7 +150,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             } else {
                 // Fade complete - turn off and reset timer
                 rgb_matrix_set_color(i, 0, 0, 0);
-                key_press_time[i] = 0;
+                key_release_time[i] = 0;
             }
         } else {
             // Key not active - off
