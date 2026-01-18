@@ -15,7 +15,8 @@
 #define TOTAL_LEDS (LEDS_PER_HALF * 2)
 
 // Reactive effect settings
-#define FADE_DURATION 300       // ms to fade out after key release
+#define FADE_DURATION_MIN 60    // ms, fastest fade when speed is max
+#define FADE_DURATION_SCALE 2   // ms per speed step (0..255)
 
 // Track release timing for fade effect
 static uint32_t key_release_time[TOTAL_LEDS];  // timestamp when key was released (0 = not fading)
@@ -102,9 +103,26 @@ static bool matrix_key_pressed(uint8_t row, uint8_t col) {
     return matrix_is_on(row, col);
 }
 
+static uint16_t reactive_fade_duration_ms(void) {
+    // Faster RGB matrix speed should mean shorter fade time.
+    uint8_t speed = rgb_matrix_get_speed();
+    return FADE_DURATION_MIN + (uint16_t)(255 - speed) * FADE_DURATION_SCALE;
+}
+
+static rgb_t reactive_rgb_with_fade(hsv_t base_hsv, uint8_t fade) {
+    if (fade < 255) {
+        base_hsv.v = (uint16_t)base_hsv.v * fade / 255;
+    }
+    return hsv_to_rgb(base_hsv);
+}
+
 // RGB Matrix indicators - simple reactive keypress effect
 // Uses matrix state directly (synced between halves) instead of process_record_user
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    hsv_t   base_hsv      = rgb_matrix_get_hsv();
+    rgb_t   base_rgb      = hsv_to_rgb(base_hsv);
+    uint16_t fade_duration = reactive_fade_duration_ms();
+
     for (uint8_t i = led_min; i < led_max; i++) {
         // Check if this is a per-key LED (not underglow)
         bool is_perkey = (i < PERKEY_LEFT_END) ||
@@ -129,8 +147,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 
         // Track state changes for fade effect
         if (key_is_pressed) {
-            // Key is held - full brightness white
-            rgb_matrix_set_color(i, 255, 255, 255);
+            // Key is held - full brightness current HSV
+            rgb_matrix_set_color(i, base_rgb.r, base_rgb.g, base_rgb.b);
             key_was_pressed[i] = true;
             key_release_time[i] = 0;  // Reset fade timer
         } else if (key_was_pressed[i] && key_release_time[i] == 0) {
@@ -138,15 +156,16 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             key_release_time[i] = timer_read32();
             if (key_release_time[i] == 0) key_release_time[i] = 1;  // Avoid 0
             key_was_pressed[i] = false;
-            rgb_matrix_set_color(i, 255, 255, 255);
+            rgb_matrix_set_color(i, base_rgb.r, base_rgb.g, base_rgb.b);
         } else if (key_release_time[i] > 0) {
             // Key released - fade out
             uint32_t elapsed = timer_elapsed32(key_release_time[i]);
 
-            if (elapsed < FADE_DURATION) {
-                // Calculate fade (255 -> 0 over FADE_DURATION)
-                uint8_t brightness = 255 - (255 * elapsed / FADE_DURATION);
-                rgb_matrix_set_color(i, brightness, brightness, brightness);
+            if (elapsed < fade_duration) {
+                // Calculate fade (255 -> 0 over fade_duration)
+                uint8_t brightness = 255 - (255 * elapsed / fade_duration);
+                rgb_t   rgb        = reactive_rgb_with_fade(base_hsv, brightness);
+                rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
             } else {
                 // Fade complete - turn off and reset timer
                 rgb_matrix_set_color(i, 0, 0, 0);
