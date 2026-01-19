@@ -27,6 +27,11 @@
 // #define SPLIT_HAND_PIN GP29
 // #define SPLIT_HAND_PIN_LOW_IS_LEFT
 
+/* Pointing device/digitizer are on the right half */
+#define SPLIT_DIGITIZER_ENABLE
+#define POINTING_DEVICE_RIGHT
+#define DIGITIZER_RIGHT
+
 /* Serial USART configuration (not in JSON yet) */
 #define SERIAL_USART_RX_PIN GP1
 #define SERIAL_USART_FULL_DUPLEX
