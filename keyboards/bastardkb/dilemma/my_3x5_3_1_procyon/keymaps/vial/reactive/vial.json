@@ -11,6 +11,12 @@
     "vid": "0xFEED",
     "pid": "0x1836"
   },
+  "bootmagic": {
+    "matrix": [
+      0,
+      0
+    ]
+  },
   "split": {
     "enabled": true,
     "soft_serial_pin": "GP0",

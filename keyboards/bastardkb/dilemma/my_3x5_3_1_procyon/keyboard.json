@@ -13,6 +13,9 @@
         "rows": ["GP6", "GP12", "GP18", "GP17"]
     },
     "diode_direction": "ROW2COL",
+    "bootmagic": {
+        "matrix": [0, 0]
+    },
     "split": {
         "enabled": true,
         "soft_serial_pin": "GP0",
