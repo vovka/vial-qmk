@@ -21,27 +21,13 @@
 #    ifndef MXT_INTERNAL_TOUCH_HYST
 #        define MXT_INTERNAL_TOUCH_HYST 5
 #    endif
-#    ifndef MXT_T56_SHIELDLESS_ENABLE
-#        define MXT_T56_SHIELDLESS_ENABLE
-#    endif
-#    ifndef MXT_RETRANSMISSION_COMPENSATION_ENABLE
-#        define MXT_RETRANSMISSION_COMPENSATION_ENABLE 0
-#    endif
-#    ifndef MXT_X_PITCH
-#        define MXT_X_PITCH 38 // Procyon boards have a standard 3.8mm pitch
-#    endif
-#    ifndef MXT_Y_PITCH
-#        define MXT_Y_PITCH 38
-#    endif
-#    ifndef MXT_ACTIVE_ACQUISITION_INTERVAL
-#        define MXT_ACTIVE_ACQUISITION_INTERVAL 255 // Free run while active - this enables us to reach a polling rate of around 300Hz
-#    endif
-#    ifndef MXT_CONFTHR
-#        define MXT_CONFTHR 5 // Increase debounce time
-#    endif
-#    ifndef MXT_MOVE_HYSTERESIS_NEXT
-#        define MXT_MOVE_HYSTERESIS_NEXT 16
-#    endif
+#    define MXT_T56_SHIELDLESS_ENABLE
+#    define MXT_RETRANSMISSION_COMPENSATION_ENABLE 0
+#    define MXT_X_PITCH 38 // Procyon boards have a standard 3.8mm pitch
+#    define MXT_Y_PITCH 38
+#    define MXT_ACTIVE_ACQUISITION_INTERVAL 255 // Free run while active - this enables us to reach a polling rate of around 300Hz
+#    define MXT_CONFTHR 5 // Increase debounce time
+#    define MXT_MOVE_HYSTERESIS_NEXT 16
 #endif
 
 // Board specific configuration
