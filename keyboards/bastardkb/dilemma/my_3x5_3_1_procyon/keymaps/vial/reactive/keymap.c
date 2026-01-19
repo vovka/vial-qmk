@@ -1,26 +1,11 @@
 /**
  * Reactive keypress effect - keys light up when pressed
- * Underglow stays off, only per-key LEDs react to keypresses
+ * Uses the custom REACTIVE_PERKEY_FADE effect from rgb_matrix_user.inc
  */
 
 #include QMK_KEYBOARD_H
 #include "dynamic_keymap.h"
 #include "vial.h"
-
-// LED layout constants
-#define LEDS_PER_HALF 43
-#define PERKEY_LEFT_END 19      // 19 per-key LEDs on left (indices 0-18)
-#define PERKEY_RIGHT_START 43
-#define PERKEY_RIGHT_END 62     // 19 per-key LEDs on right (indices 43-61)
-#define TOTAL_LEDS (LEDS_PER_HALF * 2)
-
-// Reactive effect settings
-#define FADE_DURATION_MIN 60    // ms, fastest fade when speed is max
-#define FADE_DURATION_SCALE 2   // ms per speed step (0..255)
-
-// Track release timing for fade effect
-static uint32_t key_release_time[TOTAL_LEDS];  // timestamp when key was released (0 = not fading)
-static bool     key_was_pressed[TOTAL_LEDS];   // track previous state to detect release
 
 enum dilemma_keymap_layers {
     LAYER_BASE = 0,
@@ -94,92 +79,6 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 };
 #endif
 
-// Check if a key at matrix position is currently pressed
-// Uses the synced matrix state which works on both halves
-static bool matrix_key_pressed(uint8_t row, uint8_t col) {
-    if (row >= MATRIX_ROWS || col >= MATRIX_COLS) {
-        return false;
-    }
-    return matrix_is_on(row, col);
-}
-
-static uint16_t reactive_fade_duration_ms(void) {
-    // Faster RGB matrix speed should mean shorter fade time.
-    uint8_t speed = rgb_matrix_get_speed();
-    return FADE_DURATION_MIN + (uint16_t)(255 - speed) * FADE_DURATION_SCALE;
-}
-
-static rgb_t reactive_rgb_with_fade(hsv_t base_hsv, uint8_t fade) {
-    if (fade < 255) {
-        base_hsv.v = (uint16_t)base_hsv.v * fade / 255;
-    }
-    return hsv_to_rgb(base_hsv);
-}
-
-// RGB Matrix indicators - simple reactive keypress effect
-// Uses matrix state directly (synced between halves) instead of process_record_user
-bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    hsv_t   base_hsv      = rgb_matrix_get_hsv();
-    rgb_t   base_rgb      = hsv_to_rgb(base_hsv);
-    uint16_t fade_duration = reactive_fade_duration_ms();
-
-    for (uint8_t i = led_min; i < led_max; i++) {
-        // Check if this is a per-key LED (not underglow)
-        bool is_perkey = (i < PERKEY_LEFT_END) ||
-                         (i >= PERKEY_RIGHT_START && i < PERKEY_RIGHT_END);
-
-        if (!is_perkey) {
-            // Underglow - turn off
-            rgb_matrix_set_color(i, 0, 0, 0);
-            continue;
-        }
-
-        // Find which matrix position this LED corresponds to
-        // by searching through g_led_config.matrix_co
-        bool key_is_pressed = false;
-        for (uint8_t row = 0; row < MATRIX_ROWS && !key_is_pressed; row++) {
-            for (uint8_t col = 0; col < MATRIX_COLS && !key_is_pressed; col++) {
-                if (g_led_config.matrix_co[row][col] == i) {
-                    key_is_pressed = matrix_key_pressed(row, col);
-                }
-            }
-        }
-
-        // Track state changes for fade effect
-        if (key_is_pressed) {
-            // Key is held - full brightness current HSV
-            rgb_matrix_set_color(i, base_rgb.r, base_rgb.g, base_rgb.b);
-            key_was_pressed[i] = true;
-            key_release_time[i] = 0;  // Reset fade timer
-        } else if (key_was_pressed[i] && key_release_time[i] == 0) {
-            // Key just released - start fade
-            key_release_time[i] = timer_read32();
-            if (key_release_time[i] == 0) key_release_time[i] = 1;  // Avoid 0
-            key_was_pressed[i] = false;
-            rgb_matrix_set_color(i, base_rgb.r, base_rgb.g, base_rgb.b);
-        } else if (key_release_time[i] > 0) {
-            // Key released - fade out
-            uint32_t elapsed = timer_elapsed32(key_release_time[i]);
-
-            if (elapsed < fade_duration) {
-                // Calculate fade (255 -> 0 over fade_duration)
-                uint8_t brightness = 255 - (255 * elapsed / fade_duration);
-                rgb_t   rgb        = reactive_rgb_with_fade(base_hsv, brightness);
-                rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
-            } else {
-                // Fade complete - turn off and reset timer
-                rgb_matrix_set_color(i, 0, 0, 0);
-                key_release_time[i] = 0;
-            }
-        } else {
-            // Key not active - off
-            rgb_matrix_set_color(i, 0, 0, 0);
-        }
-    }
-
-    return false;  // Let RGB matrix continue processing
-}
-
 void eeconfig_init_user(void) {
 #ifdef VIAL_COMBO_ENABLE
     vial_combo_entry_t combo = { .input = { KC_Q, KC_T, KC_B, COMBO_END }, .output = QK_BOOT };
@@ -230,4 +129,7 @@ void keyboard_post_init_user(void) {
         vial_init();
     }
 #endif
+
+    // Force the custom reactive effect
+    rgb_matrix_mode(RGB_MATRIX_CUSTOM_REACTIVE_PERKEY_FADE);
 }
