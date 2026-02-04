@@ -332,14 +332,20 @@ void dynamic_keymap_macro_send(uint8_t id) {
                 int ms = (d0 - 1) + (d1 - 1) * 255;
                 while (ms--) wait_ms(1);
             } else if (data[1] == SS_PASSWORD_CODE) {
+                const uint16_t iv_size = 16;
+                if (offset > end - 2) {
+                    break;
+                }
                 uint8_t len0 = dynamic_keymap_read_byte(offset++);
                 uint8_t len1 = dynamic_keymap_read_byte(offset++);
                 uint16_t cipher_len = (uint16_t)len0 | ((uint16_t)len1 << 8);
-                offset += cipher_len;
-                offset += 16;
-                if (offset >= end) {
+                if (end - offset < iv_size) {
                     break;
                 }
+                if (cipher_len > end - offset - iv_size) {
+                    break;
+                }
+                offset += cipher_len + iv_size;
 #ifdef VIAL_ENABLE
                 if (vial_unlocked) {
                     const char *plaintext = vial_password_get_plaintext(id);
