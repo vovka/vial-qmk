@@ -8,6 +8,7 @@
 #include "nvm_dynamic_keymap.h"
 #include "nvm_eeprom_eeconfig_internal.h"
 #include "nvm_eeprom_via_internal.h"
+#include "nvm_vial_password.h"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -90,9 +91,18 @@ STATIC_ASSERT(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR <= 65535, "DYNAMIC_KEYMAP_EEPROM_MA
 #define VIAL_ALT_REPEAT_KEY_SIZE 0
 #endif
 
+// Vial password metadata
+#ifndef VIAL_PASSWORD_EEPROM_ADDR
+#    define VIAL_PASSWORD_EEPROM_ADDR (VIAL_ALT_REPEAT_KEY_EEPROM_ADDR + VIAL_ALT_REPEAT_KEY_SIZE)
+#endif
+
+#ifndef VIAL_PASSWORD_EEPROM_SIZE
+#    define VIAL_PASSWORD_EEPROM_SIZE (VIAL_PASSWORD_SALT_SIZE)
+#endif
+
 // Dynamic macro
 #ifndef DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR
-#    define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (VIAL_ALT_REPEAT_KEY_EEPROM_ADDR + VIAL_ALT_REPEAT_KEY_SIZE)
+#    define DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR (VIAL_PASSWORD_EEPROM_ADDR + VIAL_PASSWORD_EEPROM_SIZE)
 #endif
 
 // Sanity check that dynamic keymaps fit in available EEPROM
@@ -101,6 +111,7 @@ STATIC_ASSERT(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR <= 65535, "DYNAMIC_KEYMAP_EEPROM_MA
 // or DYNAMIC_KEYMAP_EEPROM_MAX_ADDR to increase it, *only if* the microcontroller has
 // more than the default.
 STATIC_ASSERT((int64_t)(DYNAMIC_KEYMAP_EEPROM_MAX_ADDR) - (int64_t)(DYNAMIC_KEYMAP_MACRO_EEPROM_ADDR) >= 100, "Dynamic keymaps are configured to use more EEPROM than is available.");
+STATIC_ASSERT(VIAL_PASSWORD_EEPROM_SIZE >= VIAL_PASSWORD_SALT_SIZE, "VIAL_PASSWORD_EEPROM_SIZE must fit the password salt.");
 
 #ifndef TOTAL_EEPROM_BYTE_COUNT
 #    error Unknown total EEPROM size. Cannot derive maximum for dynamic keymaps.
@@ -386,3 +397,21 @@ int nvm_dynamic_keymap_set_alt_repeat_key(uint8_t index, const vial_alt_repeat_k
     return 0;
 }
 #endif
+
+void nvm_vial_password_get_salt(uint8_t *salt) {
+    if (salt == NULL) {
+        return;
+    }
+
+    void *address = (void *)(uintptr_t)VIAL_PASSWORD_EEPROM_ADDR;
+    eeprom_read_block(salt, address, VIAL_PASSWORD_SALT_SIZE);
+}
+
+void nvm_vial_password_set_salt(const uint8_t *salt) {
+    if (salt == NULL) {
+        return;
+    }
+
+    void *address = (void *)(uintptr_t)VIAL_PASSWORD_EEPROM_ADDR;
+    eeprom_update_block(salt, address, VIAL_PASSWORD_SALT_SIZE);
+}
