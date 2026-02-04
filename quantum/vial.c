@@ -23,6 +23,7 @@
 #include "vial_generated_keyboard_definition.h"
 
 #include "vial_ensure_keycode.h"
+#include "vial_password.h"
 
 #define VIAL_UNLOCK_COUNTER_MAX 50
 
@@ -195,6 +196,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
 #ifndef VIAL_INSECURE
             vial_unlocked = 0;
 #endif
+            vial_password_clear_state();
             break;
         }
         case vial_qmk_settings_query: {
