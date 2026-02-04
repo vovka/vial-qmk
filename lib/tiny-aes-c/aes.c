@@ -187,12 +187,6 @@ void AES_ctx_set_iv(struct AES_ctx *ctx, const uint8_t *iv) {
     }
 }
 
-static void XorWithIv(uint8_t *buf, const uint8_t *Iv) {
-    for (uint8_t i = 0; i < AES_BLOCKLEN; ++i) {
-        buf[i] ^= Iv[i];
-    }
-}
-
 void AES_CTR_xcrypt_buffer(struct AES_ctx *ctx, uint8_t *buf, size_t length) {
     uint8_t buffer[AES_BLOCKLEN];
     size_t i;
