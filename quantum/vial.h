@@ -22,7 +22,7 @@
 #include "eeprom.h"
 #include "action.h"
 
-#define VIAL_PROTOCOL_VERSION ((uint32_t)0x00000006)
+#define VIAL_PROTOCOL_VERSION ((uint32_t)0x00000007)
 #define VIAL_RAW_EPSIZE 32
 
 void vial_init(void);
@@ -48,6 +48,8 @@ enum {
     vial_qmk_settings_set = 0x0B,
     vial_qmk_settings_reset = 0x0C,
     vial_dynamic_entry_op = 0x0D,  /* operate on tapdance, combos, etc */
+    CMD_VIAL_PASSWORD_UNLOCK = 0x0E,
+    CMD_VIAL_PASSWORD_LOCK = 0x0F,
 };
 
 enum {

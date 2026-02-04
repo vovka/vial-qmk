@@ -36,6 +36,14 @@ int vial_unlock_in_progress = 0;
 static int vial_unlock_counter = 0;
 static uint16_t vial_unlock_timer;
 
+#define VIAL_PASSWORD_DERIVED_KEY_SIZE 32
+
+static uint8_t vial_password_derived_key[VIAL_PASSWORD_DERIVED_KEY_SIZE];
+static uint8_t vial_password_decrypted[VIAL_PASSWORD_DERIVED_KEY_SIZE];
+static uint8_t vial_password_key_offset;
+static uint8_t vial_password_key_required_length = VIAL_PASSWORD_DERIVED_KEY_SIZE;
+static bool vial_password_key_complete;
+
 #ifndef VIAL_INSECURE
 static uint8_t vial_unlock_combo_rows[] = VIAL_UNLOCK_COMBO_ROWS;
 static uint8_t vial_unlock_combo_cols[] = VIAL_UNLOCK_COMBO_COLS;
@@ -61,6 +69,18 @@ static void reload_key_override(void);
 #ifdef VIAL_ALT_REPEAT_KEY_ENABLE
 static void reload_alt_repeat_key(void);
 #endif
+
+static void vial_password_clear_state(void) {
+    vial_password_key_offset = 0;
+    vial_password_key_required_length = VIAL_PASSWORD_DERIVED_KEY_SIZE;
+    vial_password_key_complete = false;
+    memset(vial_password_derived_key, 0, sizeof(vial_password_derived_key));
+}
+
+static void vial_password_clear_buffers(void) {
+    vial_password_clear_state();
+    memset(vial_password_decrypted, 0, sizeof(vial_password_decrypted));
+}
 
 void vial_init(void) {
 #ifdef VIAL_TAP_DANCE_ENABLE
@@ -195,6 +215,48 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
 #ifndef VIAL_INSECURE
             vial_unlocked = 0;
 #endif
+            break;
+        }
+        case CMD_VIAL_PASSWORD_UNLOCK: {
+            uint8_t chunk_offset = msg[2];
+            uint8_t chunk_length = msg[3];
+            uint8_t status = 0;
+
+            if (chunk_length == 0 || chunk_length > (length - 4)) {
+                vial_password_clear_state();
+                msg[0] = status;
+                break;
+            }
+
+            if (chunk_offset == 0) {
+                vial_password_clear_state();
+            }
+
+            if (vial_password_key_complete || chunk_offset != vial_password_key_offset) {
+                vial_password_clear_state();
+                msg[0] = status;
+                break;
+            }
+
+            if ((uint16_t)chunk_offset + chunk_length > vial_password_key_required_length) {
+                vial_password_clear_state();
+                msg[0] = status;
+                break;
+            }
+
+            memcpy(&vial_password_derived_key[chunk_offset], &msg[4], chunk_length);
+            vial_password_key_offset = chunk_offset + chunk_length;
+            if (vial_password_key_offset == vial_password_key_required_length) {
+                vial_password_key_complete = true;
+                status = 1;
+            }
+
+            msg[0] = status;
+            break;
+        }
+        case CMD_VIAL_PASSWORD_LOCK: {
+            vial_password_clear_buffers();
+            msg[0] = 1;
             break;
         }
         case vial_qmk_settings_query: {
