@@ -78,14 +78,14 @@ static void vial_password_secure_wipe(void *data, size_t len) {
     }
 }
 
-void vial_password_clear_state(void) {
+static void vial_password_clear_unlock_state(void) {
     vial_password_key_offset = 0;
     vial_password_key_complete = false;
     vial_password_secure_wipe(vial_password_derived_key, sizeof(vial_password_derived_key));
 }
 
 static void vial_password_clear_buffers(void) {
-    vial_password_clear_state();
+    vial_password_clear_unlock_state();
     vial_password_secure_wipe(vial_password_decrypted, sizeof(vial_password_decrypted));
 }
 
@@ -222,7 +222,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
 #ifndef VIAL_INSECURE
             vial_unlocked = 0;
 #endif
-            vial_password_clear_state();
+            vial_password_clear_unlock_state();
             break;
         }
         case CMD_VIAL_PASSWORD_UNLOCK: {
@@ -235,7 +235,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             }
 
             if (chunk_offset == 0) {
-                vial_password_clear_state();
+                vial_password_clear_unlock_state();
             }
 
             if (vial_password_key_complete || chunk_offset != vial_password_key_offset) {
@@ -257,7 +257,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             break;
 
         unlock_fail:
-            vial_password_clear_state();
+            vial_password_clear_unlock_state();
             msg[0] = 0;
             break;
         }
