@@ -37,6 +37,13 @@
 #include "vial.h"
 #endif
 
+#ifdef VIAL_ENABLE
+__attribute__((weak)) const char *vial_password_get_plaintext(uint8_t macro_id) {
+    (void)macro_id;
+    return NULL;
+}
+#endif
+
 #ifndef DYNAMIC_KEYMAP_MACRO_DELAY
 #    define DYNAMIC_KEYMAP_MACRO_DELAY TAP_CODE_DELAY
 #endif
@@ -324,6 +331,23 @@ void dynamic_keymap_macro_send(uint8_t id) {
                 // we cannot use 0 for these, need to subtract 1 and use 255 instead of 256 for delay calculation
                 int ms = (d0 - 1) + (d1 - 1) * 255;
                 while (ms--) wait_ms(1);
+            } else if (data[1] == SS_PASSWORD_CODE) {
+                uint8_t len0 = dynamic_keymap_read_byte(offset++);
+                uint8_t len1 = dynamic_keymap_read_byte(offset++);
+                uint16_t cipher_len = (uint16_t)len0 | ((uint16_t)len1 << 8);
+                offset += cipher_len;
+                offset += 16;
+                if (offset >= end) {
+                    break;
+                }
+#ifdef VIAL_ENABLE
+                if (vial_unlocked) {
+                    const char *plaintext = vial_password_get_plaintext(id);
+                    if (plaintext) {
+                        send_string_with_delay(plaintext, DYNAMIC_KEYMAP_MACRO_DELAY);
+                    }
+                }
+#endif
             }
         } else {
             // If the char wasn't magic, just send it
