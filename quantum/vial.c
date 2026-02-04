@@ -78,7 +78,7 @@ static void vial_password_secure_wipe(void *data, size_t len) {
     }
 }
 
-static void vial_password_clear_state(void) {
+void vial_password_clear_state(void) {
     vial_password_key_offset = 0;
     vial_password_key_complete = false;
     vial_password_secure_wipe(vial_password_derived_key, sizeof(vial_password_derived_key));
