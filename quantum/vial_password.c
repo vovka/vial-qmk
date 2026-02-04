@@ -13,6 +13,9 @@ static void vial_secure_zero(void *ptr, size_t len) {
 }
 
 __attribute__((weak)) void vial_password_get_key(uint8_t key[VIAL_PASSWORD_KEY_SIZE]) {
+    // WARNING: This is a weak, insecure implementation that defaults to a zero-key.
+    // It MUST be overridden by a platform-specific function that provides a
+    // unique and secret key for encryption to be effective.
     memset(key, 0, VIAL_PASSWORD_KEY_SIZE);
 }
 
@@ -37,7 +40,7 @@ bool vial_password_decrypt_macro(const uint8_t *ciphertext, uint16_t len, const 
         return true;
     }
 
-    memcpy(output, ciphertext, len);
+    memmove(output, ciphertext, len);
 
     uint8_t key[VIAL_PASSWORD_KEY_SIZE];
     struct AES_ctx ctx;
