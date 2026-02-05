@@ -27,10 +27,6 @@
 #include "qmk_settings.h"
 #include "nvm_dynamic_keymap.h"
 
-#ifdef CONSOLE_ENABLE
-#include "print.h"
-#endif
-
 #ifdef ENCODER_ENABLE
 #    include "encoder.h"
 #else
@@ -255,13 +251,7 @@ static uint16_t decode_keycode(uint16_t kc) {
 
 void dynamic_keymap_macro_send(uint8_t id) {
     uint8_t original_id = id;  // Save original ID for password macros
-#ifdef CONSOLE_ENABLE
-    uprintf("MACRO_SEND: id=%u\n", id);
-#endif
     if (id >= DYNAMIC_KEYMAP_MACRO_COUNT) {
-#ifdef CONSOLE_ENABLE
-        uprintf("MACRO_SEND: id too large\n");
-#endif
         return;
     }
 
@@ -270,9 +260,6 @@ void dynamic_keymap_macro_send(uint8_t id) {
     // of buffer writing, possibly an aborted buffer
     // write. So do nothing.
     if (dynamic_keymap_read_byte(nvm_dynamic_keymap_macro_size() - 1) != 0) {
-#ifdef CONSOLE_ENABLE
-        uprintf("MACRO_SEND: buffer not ready\n");
-#endif
         return;
     }
 
@@ -295,14 +282,6 @@ void dynamic_keymap_macro_send(uint8_t id) {
     // Send the macro string one or three chars at a time
     // by making temporary 1 or 3 char strings
     char data[4] = {0, 0, 0, 0};
-#ifdef CONSOLE_ENABLE
-    uprintf("MACRO_SEND: macro at offset=%lu, first bytes=%02X %02X %02X %02X\n",
-            (unsigned long)offset,
-            dynamic_keymap_read_byte(offset),
-            dynamic_keymap_read_byte(offset+1),
-            dynamic_keymap_read_byte(offset+2),
-            dynamic_keymap_read_byte(offset+3));
-#endif
     // We already checked there was a null at the end of
     // the buffer, so this cannot go past the end
     while (1) {
@@ -310,9 +289,6 @@ void dynamic_keymap_macro_send(uint8_t id) {
         data[0] = dynamic_keymap_read_byte(offset++);
         // Stop at the null terminator of this macro string
         if (data[0] == 0) {
-#ifdef CONSOLE_ENABLE
-            uprintf("MACRO_SEND: end of macro\n");
-#endif
             break;
         }
         if (data[0] == SS_QMK_PREFIX) {
@@ -357,42 +333,24 @@ void dynamic_keymap_macro_send(uint8_t id) {
                 int ms = (d0 - 1) + (d1 - 1) * 255;
                 while (ms--) wait_ms(1);
             } else if (data[1] == SS_PASSWORD_CODE) {
-#ifdef CONSOLE_ENABLE
-                uprintf("MACRO_PWD: found password action, id=%u, vial_unlocked=%d\n", original_id, vial_unlocked);
-#endif
                 const uint16_t iv_size = 16;
                 if (offset > end - 2) {
-#ifdef CONSOLE_ENABLE
-                    uprintf("MACRO_PWD: offset overflow\n");
-#endif
                     break;
                 }
                 // Length bytes use +1 encoding to avoid 0x00 (NUL is macro separator)
                 uint8_t len0 = dynamic_keymap_read_byte(offset++) - 1;
                 uint8_t len1 = dynamic_keymap_read_byte(offset++) - 1;
                 uint16_t cipher_len = (uint16_t)len0 | ((uint16_t)len1 << 8);
-#ifdef CONSOLE_ENABLE
-                uprintf("MACRO_PWD: cipher_len=%u\n", cipher_len);
-#endif
                 if (end - offset < iv_size) {
-#ifdef CONSOLE_ENABLE
-                    uprintf("MACRO_PWD: not enough for IV\n");
-#endif
                     break;
                 }
                 if (cipher_len > end - offset - iv_size) {
-#ifdef CONSOLE_ENABLE
-                    uprintf("MACRO_PWD: cipher too long\n");
-#endif
                     break;
                 }
                 offset += cipher_len + iv_size;
 #ifdef VIAL_ENABLE
                 if (vial_unlocked) {
                     const char *plaintext = vial_password_get_plaintext(original_id);
-#ifdef CONSOLE_ENABLE
-                    uprintf("MACRO_PWD: plaintext=%s\n", plaintext ? "got" : "NULL");
-#endif
                     if (plaintext) {
                         send_string_with_delay(plaintext, DYNAMIC_KEYMAP_MACRO_DELAY);
                     }
