@@ -65,6 +65,10 @@
 #include "vialrgb.h"
 #endif
 
+#ifdef CONSOLE_ENABLE
+#include "print.h"
+#endif
+
 // Forward declare some helpers.
 #if defined(VIA_QMK_BACKLIGHT_ENABLE)
 void via_qmk_backlight_set_value(uint8_t *data);
@@ -181,10 +185,19 @@ void via_set_layout_options(uint32_t value) {
 
 // Called by QMK core to process VIA-specific keycodes.
 bool process_record_via(uint16_t keycode, keyrecord_t *record) {
+#ifdef CONSOLE_ENABLE
+    // Debug: print all keycodes to see what's coming through
+    if (record->event.pressed) {
+        uprintf("VIA: kc=0x%04X QK_MACRO=0x%04X QK_MACRO_MAX=0x%04X\n", keycode, QK_MACRO, QK_MACRO_MAX);
+    }
+#endif
     // Handle macros
     if (record->event.pressed) {
         if (keycode >= QK_MACRO && keycode <= QK_MACRO_MAX) {
             uint8_t id = keycode - QK_MACRO;
+#ifdef CONSOLE_ENABLE
+            uprintf("VIA: calling macro_send(%u)\n", id);
+#endif
             dynamic_keymap_macro_send(id);
             return false;
         }
