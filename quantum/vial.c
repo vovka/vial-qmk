@@ -26,11 +26,6 @@
 #include "vial_ensure_keycode.h"
 #include "vial_password.h"
 
-#ifdef CONSOLE_ENABLE
-#include "print.h"
-#define VIAL_PWD_DEBUG 1
-#endif
-
 #define VIAL_UNLOCK_COUNTER_MAX 50
 
 #ifdef VIAL_INSECURE
@@ -101,15 +96,8 @@ void vial_password_get_key(uint8_t key[VIAL_PASSWORD_KEY_SIZE]) {
     if (vial_password_key_complete) {
         // Use first 16 bytes of the 32-byte derived key
         memcpy(key, vial_password_derived_key, VIAL_PASSWORD_KEY_SIZE);
-#ifdef VIAL_PWD_DEBUG
-        uprintf("PWD_KEY: using derived key[0-3]=%02X%02X%02X%02X\n",
-                key[0], key[1], key[2], key[3]);
-#endif
     } else {
         memset(key, 0, VIAL_PASSWORD_KEY_SIZE);
-#ifdef VIAL_PWD_DEBUG
-        uprintf("PWD_KEY: no key available\n");
-#endif
     }
 }
 
@@ -126,15 +114,8 @@ static uint8_t vial_macro_read_byte(uint16_t offset) {
 
 // Override weak vial_password_get_plaintext to actually decrypt passwords
 const char *vial_password_get_plaintext(uint8_t macro_id) {
-#ifdef VIAL_PWD_DEBUG
-    uprintf("PWD_GET: macro_id=%u key_complete=%d\n", macro_id, vial_password_key_complete);
-#endif
-
     // Only decrypt if session is unlocked (key received from GUI)
     if (!vial_password_key_complete) {
-#ifdef VIAL_PWD_DEBUG
-        uprintf("PWD_GET: session not unlocked\n");
-#endif
         return NULL;
     }
 
@@ -152,15 +133,8 @@ const char *vial_password_get_plaintext(uint8_t macro_id) {
     }
 
     if (offset >= buffer_size) {
-#ifdef VIAL_PWD_DEBUG
-        uprintf("PWD_GET: macro not found\n");
-#endif
         return NULL;
     }
-
-#ifdef VIAL_PWD_DEBUG
-    uprintf("PWD_GET: macro at offset=%u\n", offset);
-#endif
 
     // Now scan within this macro for SS_PASSWORD_CODE
     while (offset < buffer_size) {
@@ -168,18 +142,11 @@ const char *vial_password_get_plaintext(uint8_t macro_id) {
 
         if (byte == 0) {
             // End of macro, no password found
-#ifdef VIAL_PWD_DEBUG
-            uprintf("PWD_GET: end of macro, no password\n");
-#endif
             return NULL;
         }
 
         if (byte == SS_QMK_PREFIX) {
             uint8_t action = vial_macro_read_byte(offset + 1);
-
-#ifdef VIAL_PWD_DEBUG
-            uprintf("PWD_GET: prefix at %u, action=0x%02X\n", offset, action);
-#endif
 
             if (action == SS_PASSWORD_CODE) {
                 // Found password marker
@@ -189,14 +156,7 @@ const char *vial_password_get_plaintext(uint8_t macro_id) {
                 uint8_t len_hi = vial_macro_read_byte(offset + 3) - 1;
                 uint16_t cipher_len = len_lo | ((uint16_t)len_hi << 8);
 
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_GET: found password, cipher_len=%u\n", cipher_len);
-#endif
-
                 if (cipher_len == 0 || cipher_len > VIAL_PASSWORD_PLAINTEXT_MAX - 1) {
-#ifdef VIAL_PWD_DEBUG
-                    uprintf("PWD_GET: bad cipher_len\n");
-#endif
                     return NULL;
                 }
 
@@ -208,32 +168,14 @@ const char *vial_password_get_plaintext(uint8_t macro_id) {
                 uint8_t iv[VIAL_PASSWORD_IV_SIZE];
                 dynamic_keymap_macro_get_buffer(offset + 4 + cipher_len, VIAL_PASSWORD_IV_SIZE, iv);
 
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_GET: read from offset=%u, enc_off=%u, iv_off=%u\n",
-                        offset, offset + 4, offset + 4 + cipher_len);
-                uprintf("PWD_GET: enc[0-3]=%02X%02X%02X%02X\n", encrypted[0], encrypted[1], encrypted[2], encrypted[3]);
-                uprintf("PWD_GET: iv[0-3]=%02X%02X%02X%02X\n", iv[0], iv[1], iv[2], iv[3]);
-#endif
-
                 // Decrypt using the derived key from GUI
                 if (!vial_password_decrypt_macro(encrypted, cipher_len, iv,
                                                   (uint8_t *)vial_password_plaintext_buffer)) {
-#ifdef VIAL_PWD_DEBUG
-                    uprintf("PWD_GET: decrypt failed\n");
-#endif
                     return NULL;
                 }
 
                 // Null terminate
                 vial_password_plaintext_buffer[cipher_len] = '\0';
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_GET: success, len=%u\n", cipher_len);
-                uprintf("PWD_GET: decrypted bytes: ");
-                for (uint16_t i = 0; i < cipher_len; i++) {
-                    uprintf("%02X ", (uint8_t)vial_password_plaintext_buffer[i]);
-                }
-                uprintf("\n");
-#endif
                 return vial_password_plaintext_buffer;
             }
 
@@ -251,9 +193,6 @@ const char *vial_password_get_plaintext(uint8_t macro_id) {
         }
     }
 
-#ifdef VIAL_PWD_DEBUG
-    uprintf("PWD_GET: reached end of buffer\n");
-#endif
     return NULL;
 }
 
@@ -398,14 +337,7 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             uint8_t chunk_length = msg[3];
             uint8_t status = 0;
 
-#ifdef VIAL_PWD_DEBUG
-            uprintf("PWD_UNLOCK: offset=%u len=%u\n", chunk_offset, chunk_length);
-#endif
-
             if (chunk_length == 0 || chunk_length > (length - 4)) {
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_UNLOCK: fail - bad length\n");
-#endif
                 goto unlock_fail;
             }
 
@@ -414,16 +346,10 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             }
 
             if (vial_password_key_complete || chunk_offset != vial_password_key_offset) {
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_UNLOCK: fail - complete=%d expect_offset=%u\n", vial_password_key_complete, vial_password_key_offset);
-#endif
                 goto unlock_fail;
             }
 
             if ((uint16_t)chunk_offset + chunk_length > vial_password_key_required_length) {
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_UNLOCK: fail - overflow\n");
-#endif
                 goto unlock_fail;
             }
 
@@ -432,11 +358,6 @@ void vial_handle_cmd(uint8_t *msg, uint8_t length) {
             if (vial_password_key_offset == vial_password_key_required_length) {
                 vial_password_key_complete = true;
                 status = 1;
-#ifdef VIAL_PWD_DEBUG
-                uprintf("PWD_UNLOCK: complete! key[0-3]=%02X%02X%02X%02X\n",
-                        vial_password_derived_key[0], vial_password_derived_key[1],
-                        vial_password_derived_key[2], vial_password_derived_key[3]);
-#endif
             }
 
             msg[0] = status;
