@@ -421,6 +421,7 @@
 #define SS_UP_CODE 3
 #define SS_DELAY_CODE 4
 #define SS_PASSWORD_CODE 8
+#define SS_PASSWORD_IV_SIZE 16
 
 #define SS_TAP(keycode) "\1\1" SYMBOL_STR(keycode)
 #define SS_DOWN(keycode) "\1\2" SYMBOL_STR(keycode)

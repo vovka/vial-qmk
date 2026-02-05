@@ -333,7 +333,7 @@ void dynamic_keymap_macro_send(uint8_t id) {
                 int ms = (d0 - 1) + (d1 - 1) * 255;
                 while (ms--) wait_ms(1);
             } else if (data[1] == SS_PASSWORD_CODE) {
-                const uint16_t iv_size = 16;
+                const uint16_t iv_size = SS_PASSWORD_IV_SIZE;
                 if (offset > end - 2) {
                     break;
                 }
